@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DASH Player - Testbed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #videoPlayer {
+            width: 100%;
+            max-width: 1280px;
+            background: #000;
+            margin: 20px 0;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .log {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="dash_player.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>DASH Player - Streaming Testbed</h1>
+        
+        <div class="controls">
+            <label for="mpdUrl">MPD URL:</label>
+            <input type="text" id="mpdUrl" placeholder="http://SERVER_IP:8080/dash/manifest.mpd" value="">
+            <button onclick="loadPlayer()">Load Player</button>
+            <button onclick="stopPlayer()">Stop</button>
+        </div>
+
+        <div class="status" id="status">
+            Status: Ready
+        </div>
+
+        <video id="videoPlayer" controls></video>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-label">Current Bitrate</div>
+                <div class="metric-value" id="currentBitrate">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Buffer Level</div>
+                <div class="metric-value" id="bufferLevel">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Playback Rate</div>
+                <div class="metric-value" id="playbackRate">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Dropped Frames</div>
+                <div class="metric-value" id="droppedFrames">-</div>
+            </div>
+        </div>
+
+        <h3>Event Log</h3>
+        <div class="log" id="eventLog"></div>
+    </div>
+
+    <script>
+        // Get MPD URL from query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const mpdParam = urlParams.get('mpd');
+        if (mpdParam) {
+            document.getElementById('mpdUrl').value = mpdParam;
+        }
+
+        // Get stats server URL from query parameter or use default
+        const statsServerParam = urlParams.get('stats_server');
+        const statsServerUrl = statsServerParam || 'http://SERVER_IP:8000';
+        window.STATS_SERVER_URL = statsServerUrl;
+
+        // Get experiment ID from query parameter
+        const experimentId = urlParams.get('experiment_id') || 'default_experiment';
+        window.EXPERIMENT_ID = experimentId;
+
+        function loadPlayer() {
+            const mpdUrl = document.getElementById('mpdUrl').value;
+            if (!mpdUrl) {
+                alert('Please enter an MPD URL');
+                return;
+            }
+            initializeDashPlayer(mpdUrl);
+        }
+
+        function stopPlayer() {
+            if (window.dashPlayer) {
+                window.dashPlayer.destroy();
+                window.dashPlayer = null;
+                updateStatus('Stopped');
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = 'Status: ' + message;
+        }
+
+        function logEvent(message) {
+            const log = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}<br>`;
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+

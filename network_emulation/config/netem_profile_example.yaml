@@ -1,0 +1,15 @@
+# Example static network profile for tc/netem
+# Used by apply_static_profile.py
+
+# Base delay in milliseconds
+delay_ms: 50
+
+# Jitter (delay variation) in milliseconds
+jitter_ms: 10
+
+# Packet loss percentage (0-100)
+loss_pct: 0.5
+
+# Rate limit in Mbps (optional, comment out to disable)
+rate_mbps: 10
+

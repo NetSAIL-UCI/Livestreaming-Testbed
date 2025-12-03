@@ -1,0 +1,15 @@
+id: "exp_002_trace_dash"
+description: "DASH over time-varying terrestrial trace"
+
+protocol: "dash"
+
+mpd_url: "http://SERVER_PUBLIC_IP:8080/dash/manifest.mpd"
+
+network_profile:
+  type: "trace"
+  file: "../../network_emulation/traces/example_terrestrial_trace.csv"
+
+experiment:
+  duration_s: 180
+  output_dir: "../../experiments/results/exp_002_trace_dash"
+

@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # Traffic Shaper - applies network conditions using tc/netem
+  traffic_shaper:
+    build:
+      context: ./network_emulation
+      dockerfile: Dockerfile
+    container_name: traffic_shaper
+    privileged: true  # Required for tc/netem
+    networks:
+      - client_side_net
+      - server_side_net
+    volumes:
+      - ./network_emulation/config:/app/config:ro
+      - ./network_emulation/traces:/app/traces:ro
+    environment:
+      - CLIENT_IF=eth0
+      - SERVER_IF=eth1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "tc", "qdisc", "show", "dev", "eth0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # DASH Media Server - NGINX serving DASH content
+  dash_media_server:
+    build:
+      context: ./protocol_integration/dash/media_server
+      dockerfile: Dockerfile
+    container_name: dash_media_server
+    networks:
+      - server_side_net
+    ports:
+      - "8080:8080"  # Exposed to host for client access
+    volumes:
+      - ./protocol_integration/dash/media_server/segments:/usr/share/nginx/html/dash:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - traffic_shaper
+
+  # Stats Server - receives and stores metrics from clients
+  stats_server:
+    build:
+      context: ./analytics/stats_server
+      dockerfile: Dockerfile
+    container_name: stats_server
+    networks:
+      - server_side_net
+    ports:
+      - "8001:8000"  # Exposed to host for client access (host:container)
+    environment:
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_USERNAME=starlink
+      - MONGO_PASSWORD=starlink
+      - MONGO_DATABASE=testbed
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB - stores metrics from stats_server
+  mongo:
+    image: mongo:4.4.22
+    container_name: mongo
+    networks:
+      - server_side_net
+    ports:
+      - "27017:27017"  # Exposed for direct access if needed
+    volumes:
+      - mongodb_data:/data/db
+      - ./analytics/database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=starlink
+      - MONGO_INITDB_ROOT_PASSWORD=starlink
+      - MONGO_INITDB_DATABASE=testbed
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Runner - optional service for automated experiment execution
+  runner:
+    build:
+      context: ./runner
+      dockerfile: Dockerfile
+    container_name: runner
+    networks:
+      - server_side_net
+    volumes:
+      - ./session_simulator:/app/scenarios:ro
+      - ./experiments:/app/experiments
+      - ./network_emulation:/app/network_emulation:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    depends_on:
+      - traffic_shaper
+      - dash_media_server
+      - stats_server
+      - mongo
+    profiles:
+      - runner  # Only start with --profile runner
+    restart: "no"
+
+networks:
+  # Network for client-side connection (laptop -> traffic_shaper)
+  client_side_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  # Network for server-side connection (traffic_shaper -> media_server)
+  server_side_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  mongodb_data:
+    driver: local
+

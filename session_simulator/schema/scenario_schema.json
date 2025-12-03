@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Streaming Session Scenario",
+  "type": "object",
+  "required": ["id", "protocol", "mpd_url", "network_profile", "experiment"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique experiment identifier"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the experiment"
+    },
+    "protocol": {
+      "type": "string",
+      "enum": ["dash", "lldash", "webrtc", "moq"],
+      "description": "Streaming protocol to test"
+    },
+    "mpd_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the MPD/manifest file"
+    },
+    "network_profile": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["static", "trace"],
+          "description": "Network profile type"
+        },
+        "file": {
+          "type": "string",
+          "description": "Path to profile file (YAML for static, CSV for trace)"
+        }
+      }
+    },
+    "experiment": {
+      "type": "object",
+      "required": ["duration_s"],
+      "properties": {
+        "duration_s": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Experiment duration in seconds"
+        },
+        "output_dir": {
+          "type": "string",
+          "description": "Output directory for results (relative to experiments/results/)"
+        }
+      }
+    }
+  }
+}
+

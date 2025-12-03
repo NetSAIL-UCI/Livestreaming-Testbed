@@ -1,0 +1,16 @@
+id: "exp_001_basic_dash"
+description: "Basic DASH over simple terrestrial profile"
+
+protocol: "dash"
+
+# MPD URL - SERVER_PUBLIC_IP will be replaced by runner
+mpd_url: "http://SERVER_PUBLIC_IP:8080/dash/manifest.mpd"
+
+network_profile:
+  type: "static"
+  file: "../../network_emulation/config/netem_profile_example.yaml"
+
+experiment:
+  duration_s: 120
+  output_dir: "../../experiments/results/exp_001_basic_dash"
+
